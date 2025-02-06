@@ -1,0 +1,69 @@
+Ngày 12/11/2024 Version 1.0
+***************************************
+********** ĐIỀU KHOẢN SỬ DỤNG**********
+***************************************
+
+1) Phần mềm AutoMove được phát triển bởi Admin Wintech Capital. AutoMove được code bằng ngôn ngữ Python và là phần mềm offline không cần cài đặt. AutoMove hỗ trợ người dùng tự động mở các Google Profile đã đăng nhập trước, tự bật VPN dựa trên vị trí cho trước, và sử dung AI được huấn luyện tự động click vào các điểm ảnh. Wintech Capital cam kết không sử dụng phần mềm cho các mục đích khác với các mục đích nêu trên. 
+
+2) AutoMove được chia sẻ miễn phí đến với các thành viên hoạt động lâu năm của cộng đồng Wintech Capital. Mọi hành vi tự ý sao chép, chia sẻ, sử dụng cho mục đích thương mại đều không được cho phép. 
+
+3) AutoMove chỉ được chia sẻ thông qua Admin Wintech Capital. Mọi thắc mắc xin liên hệ tài khoản Telegram: https://t.me/VuTheAnhWinTech
+
+***************************************
+********** HƯỚNG DẪN SỬ DỤNG***********
+***************************************
+
+1) AutoMove chỉ chạy trên hệ điều hành Windows và tương thích với trình duyệt Chrome. Cài đặt cấu hình màn hình: Scale 100%, Resolution (1920 x 1080) hoặc (1680 x 1050), Display Orientation: Landspace. Cài đặt trình duyệt Chrome: Ngôn ngữ: Tiếng Anh (English), Theme Trắng (White) mặc định, Size Default 100%, Font Medium. Luôn mở sẵn 1 tab Chrome ở chế độ full size trước khi chạy AutoMove. 
+
+2) Khi bật mỗi Google Profile người dùng có thể cung cấp mật khẩu ví để có thể kích hoạt ví. Hiện tại AutoMove tương thích với 2 ví: Okx Wallet và Rabby Wallet. Lưu ý AutoMove không yêu cầu người dùng cung cấp cụm từ khóa bí mật. Như đã tuyên bố trên phần "Điều Khoản Sử Dụng", AutoMove là phần mềm offline không cần cài đặt, do đó không thu nhập dữ liệu người dùng và không tác động vào hệ thống máy của người dùng. 
+
+4) Để tránh lỗi không tương thích với các ví EVM khác nhau, người dùng nên tắt tất cả các ví non-EVM khi chạy Tool. Ví dụ chọn ví Okx + Rabby Wallet thì chỉ bật extension Okx + Rabby Wallet và tắt extension của tất cả các ví khác. Truy cập đường link sau trên Chrome để bật/tắt các extension: chrome://extensions/
+
+5) Google Profile mặc định có tên là Default, các Profile được tạo thêm sẽ có tên lần lượt là Profile 2, Profile 3, Profile 4,... Nên sử dụng các email đã xác minh thông tin để tạo thêm các Google Profile mới. Kiểm tra các Google Profile trên máy tính bằng đường dẫn 
+C:\Users\{user_name}\AppData\Local\Google\Chrome\User Data
+
+
+
+***************************************
+********** HƯỚNG DẪN TAIKO  ***********
+***************************************
+
+1) Sử dung cả 2 wallet Okx Wallet và Rabby Wallet cho chung 1 ví (chung private key hoặc seed phrase).
+
+2) Đi cầu ETH từ mạng OP hoặc Arb về Taiko, phí rất rẻ.
+https://app.xy.finance/
+
+3) Kết nới ví Rabby với trang Izumi để làm nhiệm vụ. Swap qua lại cặp ETH/WETH một vài lần bằng tay xem thành công không? 
+https://izumi.finance/trade/swap
+
+4) Mở tool trên chọn
+ví: Both
+chạy taiko: y (các dự án khác chọn n)
+Nhập số lần lặp lại cho Taiko: 2
+Nhập số lượng min ETH Swap, Nhập số lượng min ETH Swap: tùy theo số ETH có trong ví
+Nhập thời gian chờ cho mỗi tx: 230
+Nhập Gas Option (custom/normal/fast): custom
+Nhập Custom Gas Fee: 0.15
+
+5) Hiện lên giao diện chính của Tool nhập tên Profile là Default hoặc Profile 1, Profile 2...
+
+
+
+***************************************
+********** HƯỚNG DẪN SONIC  ***********
+***************************************
+Hướng dẫn chạy dự án Sonic Testnet - dự án làm về Game Layer2 trên Solana, đã raise 12m. Sử dụng Tool Automove của Wintech:
+
+1) Cài đặt và tạo ví Backpack: https://chromewebstore.google.com/detail/backpack/aflkmfhebedbjioipglgcbcmnbpgliof
+
+2) Add Network Testnet 
+Đầu tiên mở ví backpack=> Setting => Peferences => ấn Developer Mode => Quay lại màn hình chính ấn vào hình bên tay phải account (xem hình đính kèm) => Add network => Sonic Frontier V1 
+
+3) Faucet để lấy Sol Testnet (miễn phí):
+ Vào mục faucet: https://faucet.sonic.game/#/?network=testnet.v1 (nhớ chọn testnet V1) Yêu cầu ví phải có 0.01 $SOL mạng mainnet.
+
+4) Cày nhiệm vụ mỗi ngày, bao gồm điểm danh và chạy 100 tx. Đạt đủ nhiệm vụ sẽ được thưởng các box, mở box sẽ tích lũy được point. Point sẽ dùng để đổi token dự án khi lên Mainnet. Tool sẽ tự động chạy tx và mở box.
+
+Truy cập link và kết nối ví: https://odyssey.sonic.game/?join=PjeODi
+Có các mục Check-in để điểm danh và TX milestone để thực hiện nhiệm vụ chạy tx và claim box
+
