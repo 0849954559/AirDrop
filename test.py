@@ -24,18 +24,40 @@ def create_layout():
         [sg.Button('Open Profile'), sg.Exit()]
     ]
 
+
+def find_chrome_path():
+    """Tìm đường dẫn Chrome tự động."""
+    possible_paths = [
+        os.path.join(os.getenv('LOCALAPPDATA'), r'Google\Chrome\Application\chrome.exe'),
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe") as key:
+            chrome_path, _ = winreg.QueryValueEx(key, "")
+            if os.path.exists(chrome_path):
+                return chrome_path
+    except FileNotFoundError:
+        pass
+
+    return None
+
+
 def open_chrome_with_profile(profile_name):
-    """Mở Chrome với profile chỉ định"""
-    chrome_path = os.path.join(os.getenv('LOCALAPPDATA'), r'Google\Chrome\Application\chrome.exe')
-    if not os.path.exists(chrome_path):
-        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-    if not os.path.exists(chrome_path):
-        sg.popup_error("Chrome không tìm thấy! Kiểm tra lại cài đặt.")
+    """Mở Chrome với profile chỉ định."""
+    chrome_path = find_chrome_path()
+    if not chrome_path:
+        print("Chrome không tìm thấy! Kiểm tra lại cài đặt.")
         return
-
     subprocess.Popen([
-        chrome_path, f'--profile-directory={profile_name}', '--new-window', '--start-maximized', 'https://www.google.com'
+        chrome_path, f'--profile-directory={profile_name}', '--new-window', '--start-maximized',
+        'https://www.google.com'
     ])
 
 def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_time=2):
@@ -51,7 +73,7 @@ def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_ti
         location = pyautogui.locateCenterOnScreen(img_path, confidence=confidence)
         if location:
             x, y = location
-            pyautogui.moveTo(x, y, duration=1.2)
+            pyautogui.moveTo(x, y, duration=1)
             pyautogui.click()
             print(f"Clicked on '{image_name}' at ({x}, {y})")
             return True
@@ -66,7 +88,7 @@ def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_ti
 def enter_password(password):
     """Nhập mật khẩu"""
     time.sleep(5)
-    pyautogui.typewrite(password, interval=0.15)
+    pyautogui.typewrite(password, interval=0.05)
     pyautogui.press('enter')
 
 def get_random_address():
@@ -85,7 +107,7 @@ def enter_address():
     address = get_random_address()
     if address:
         time.sleep(1)
-        pyautogui.typewrite(address, interval=0.1)
+        pyautogui.typewrite(address, interval=0.01)
         print(f"Đã nhập địa chỉ: {address}")
     else:
         print("Không có địa chỉ để nhập!")
@@ -94,7 +116,7 @@ def enter_random_amount():
     """Nhập số lượng token ngẫu nhiên (0.00000x)"""
     time.sleep(1)
     random_number = f"0.00000{random.randint(1, 9)}"
-    pyautogui.typewrite(random_number, interval=0.1)
+    pyautogui.typewrite(random_number, interval=0.01)
     print(f"Entered amount: {random_number}")
 
 # =========================== CHẠY TOOL ===========================
@@ -141,6 +163,7 @@ while True:
         enter_random_amount()
         locate_and_click("review.png", confidence=0.8)
         locate_and_click("approve.png", confidence=0.7)
+        time.sleep(1.5)
         locate_and_click("done.png", confidence=0.8)
 
 window.close()
