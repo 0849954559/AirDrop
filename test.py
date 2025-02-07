@@ -42,12 +42,24 @@ def open_chrome_with_profile(profile_name):
 
 
 
+def get_icon_path():
+    """Get the path of the backpack_icon.png inside the 'images' folder relative to the script."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # Get script directory
+    icon_path = os.path.join(script_dir, "images","sonic", "backpack_icon.png")  # Look in 'images' folder
+    return icon_path
+
+
 def click_extension():
     """Locate and click the pinned Chrome extension with smooth mouse movement."""
     time.sleep(3)  # Give Chrome extra time to load
     print("Locating the Backpack Wallet extension...")
 
-    icon_path = r"D:\Tool\tool\images\sonic\backpack_icon.png"
+    icon_path = get_icon_path()  # Get the correct icon path dynamically
+
+    # Check if the file exists before using it
+    if not os.path.exists(icon_path):
+        sg.popup_error(f"Error: The icon file was not found at:\n{icon_path}\nPlease ensure it's in the same folder as the script.")
+        return
 
     location = None
     for _ in range(5):  # Try locating the icon multiple times
@@ -63,7 +75,6 @@ def click_extension():
         print("Backpack Wallet extension clicked.")
     else:
         sg.popup_error("Could not find the Backpack Wallet extension. Ensure it's visible on the screen.")
-
 def enter_password(password):
     """Simulate human-like password entry."""
     time.sleep(5)  # Wait for Chrome to fully load
