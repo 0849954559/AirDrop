@@ -24,9 +24,9 @@ def create_layout():
 
 def open_chrome_with_profile(profile_name):
     """Open Chrome with a specified user profile without showing a popup."""
-    # chrome_path = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe")
-
-    chrome_path = os.path.expandvars("C:\Program Files\Google\Chrome\Application\chrome.exe")
+    chrome_path = os.path.join(os.getenv('LOCALAPPDATA'), r'Google\Chrome\Application\chrome.exe')
+    if not os.path.exists(chrome_path):
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
     if not os.path.exists(chrome_path):
         sg.popup_error("Chrome executable not found! Please check your installation.")
@@ -47,7 +47,7 @@ def click_extension():
     time.sleep(3)  # Give Chrome extra time to load
     print("Locating the Backpack Wallet extension...")
 
-    icon_path = r"D:\Tool\tool\claim reward image\backpack_icon.png"
+    icon_path = r"D:\Tool\tool\images\sonic\backpack_icon.png"
 
     location = None
     for _ in range(5):  # Try locating the icon multiple times
