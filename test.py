@@ -5,6 +5,7 @@ import time
 import json
 import os
 import random
+import psutil
 
 # Cấu hình chung
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,8 +25,10 @@ def create_layout():
         [sg.Text('Crypto Wallet Password', size=(15, 1)),
          sg.InputText(key='Crypto Wallet Password', password_char='*')],
         [sg.Text('Number of Transactions', size=(15, 1)), sg.InputText(key='Num Transactions', size=(5, 1))],
+        [sg.Checkbox('Enable Check-In', default=True, key='EnableCheckIn')],  # ✅ Checkbox for check-in
         [sg.Button('Open Profile'), sg.Exit()]
     ]
+
 
 
 def find_chrome_path():
@@ -62,8 +65,8 @@ def open_chrome_with_profile(profile_name):
                       'https://www.google.com'])
 
 
-def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_time=2):
-    """Tìm và click vào ảnh"""
+def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_time=1):
+    """Tìm và click vào ảnh với xử lý lỗi."""
     img_path = os.path.join(IMAGE_PATH, image_name)
     if not os.path.exists(img_path):
         sg.popup_error(f"File ảnh '{image_name}' không tồn tại: {img_path}")
@@ -71,19 +74,21 @@ def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_ti
 
     time.sleep(wait_time)  # Chờ trước khi tìm ảnh
 
-    for _ in range(retries):
-        location = pyautogui.locateCenterOnScreen(img_path, confidence=confidence)
-        if location:
-            x, y = location
-            pyautogui.moveTo(x, y, duration=1)
-            pyautogui.click()
-            print(f"Clicked on '{image_name}' at ({x}, {y})")
-            return True
+    for attempt in range(retries):
+        try:
+            location = pyautogui.locateCenterOnScreen(img_path, confidence=confidence)
+            if location:
+                x, y = location
+                pyautogui.moveTo(x, y, duration=0.75)
+                pyautogui.click()
+                print(f"Clicked on '{image_name}' at ({x}, {y})")
+                return True
+        except pyautogui.ImageNotFoundException:
+            print(f"Attempt {attempt+1}/{retries}: '{image_name}' not found, retrying...")
         time.sleep(1)
 
     pyautogui.screenshot("debug_screen.png")
-    print("Screenshot saved as debug_screen.png")
-    sg.popup_error(f"Không tìm thấy '{image_name}'. Hãy kiểm tra lại.")
+    print(f"Không tìm thấy '{image_name}', đã lưu ảnh màn hình debug_screen.png")
     return False
 
 
@@ -124,7 +129,17 @@ def enter_random_amount():
     pyautogui.typewrite(random_number, interval=0.01)
     print(f"Entered amount: {random_number}")
 
-
+def close_chrome():
+    """Đóng tất cả các tiến trình Chrome sau khi giao dịch hoàn thành."""
+    print("Closing Google Chrome...")
+    for process in psutil.process_iter(attrs=['pid', 'name']):
+        if "chrome" in process.info['name'].lower():
+            try:
+                process_pid = process.info['pid']
+                psutil.Process(process_pid).terminate()  # Terminate Chrome
+                print(f"Closed Chrome process (PID: {process_pid})")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
 # =========================== CHẠY TOOL ===========================
 
 # Load previous data if exists
@@ -136,27 +151,71 @@ except FileNotFoundError:
 
 
 def repeat_transaction(wallet_password, num_transactions):
-    """Only repeat the transaction steps without reopening Chrome or re-entering wallet password"""
-    for _ in range(num_transactions):
-        # Try to click the "send" button, if not found click the backup button and return to the repeat loop
-        if not locate_and_click("send.png", confidence=0.8):  # If the "send" button is not found
-            locate_and_click("return.png", confidence=0.8)
-            locate_and_click("return.png", confidence=0.8)
-            locate_and_click("x.png", confidence=0.8)
-            locate_and_click("port.png", confidence=0.8)
+    """Giao dịch lặp lại và nếu có lỗi, nó sẽ thử lại một lần trước khi bỏ qua"""
+    for i in range(num_transactions):
+        success = False  # Biến để kiểm tra nếu giao dịch thành công
+        max_attempts = 2  # Số lần thử lại tối đa
 
-        locate_and_click("send.png", confidence=0.8)  # Click on send
-        locate_and_click("sol.png", confidence=0.8)  # Click on the cryptocurrency type (sol)
-        locate_and_click("address.png", confidence=0.8)  # Click on the address field
-        enter_address()  # Enter the address from the file
-        locate_and_click("next.png", confidence=0.8)  # Click next
-        enter_random_amount()  # Enter a random amount to send
-        locate_and_click("review.png", confidence=0.8)  # Click on review
-        locate_and_click("approve.png", confidence=0.7)  # Approve the transaction
-        time.sleep(1.5)  # Wait a moment
-        locate_and_click("done.png", confidence=0.8)  # Complete the transaction
+        for attempt in range(max_attempts):
+            print(f"Thực hiện giao dịch {i + 1}, lần thử {attempt + 1}...")
 
-        print(f"Transaction {_ + 1} completed.")
+            if not locate_and_click("send.png", confidence=0.8):
+                print("Không tìm thấy nút gửi, thử quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            if not locate_and_click("sol.png", confidence=0.8):
+                print("Không tìm thấy loại tiền, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            if not locate_and_click("address.png", confidence=0.8):
+                print("Không tìm thấy ô nhập địa chỉ, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            enter_address()  # Nhập địa chỉ ví
+
+            if not locate_and_click("next.png", confidence=0.8):
+                print("Không tìm thấy nút tiếp theo, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            enter_random_amount()  # Nhập số tiền
+
+            if not locate_and_click("review.png", confidence=0.8):
+                print("Không tìm thấy nút review, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            if not locate_and_click("approve.png", confidence=0.8):
+                print("Không tìm thấy nút approve, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            time.sleep(1.5)  # Đợi giao dịch hoàn thành
+
+            if not locate_and_click("done.png", confidence=0.8):
+                print("Không tìm thấy nút hoàn thành, quay lại...")
+                locate_and_click("return.png", confidence=0.8) or locate_and_click("x.png", confidence=0.8)
+                time.sleep(0.5)
+                continue
+
+            success = True  # Giao dịch hoàn thành thành công
+            print(f"Giao dịch {i + 1} hoàn thành.")
+            break  # Thoát khỏi vòng lặp thử lại
+
+        if not success:
+            print(f"Giao dịch {i + 1} thất bại sau {max_attempts} lần thử. Chuyển sang giao dịch tiếp theo.")
+
+        # Đợi trước khi thử giao dịch tiếp theo
+        time.sleep(0.5)
 
 
 # Create the window
@@ -174,6 +233,7 @@ while True:
     if event == 'Open Profile':
         google_profile = values['Google Profile']
         wallet_password = values['Crypto Wallet Password']
+        enable_checkin = values['EnableCheckIn']  # ✅ Read checkbox value
 
         # Validate that the necessary fields are filled
         if not google_profile or not wallet_password:
@@ -205,23 +265,33 @@ while True:
             enter_password(wallet_password)  # Enter the wallet password once
             chrome_opened = True  # Mark that Chrome has been opened and password entered
 
-            # check-in
-            pyautogui.hotkey('F5')  # Open a new tab in the browser
-            time.sleep(1)  # Wait for the new tab to open
-            pyautogui.hotkey('ctrl', 'l')  # Focus on the address bar (Ctrl + L)
-            pyautogui.typewrite("https://odyssey.sonic.game/task/check-in")  # Type the website URL # Wait for the new tab to open
-            pyautogui.press('enter')  # Press Enter to open the website
-            time.sleep(2)
-            pyautogui.moveTo(960, 540, duration=1)
-            time.sleep(1)  #
-            pyautogui.scroll(-500)
-            locate_and_click("checkin.png", confidence=0.8)
-            time.sleep(3)
-            locate_and_click("approvecheckin.png", confidence=0.8)
-            time.sleep(1)
-        # transaction repeat
-        locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
-        repeat_transaction(wallet_password, num_transactions)
+            # ✅ Run Check-In only if enabled
+            if enable_checkin:
+                print("Check-in feature is enabled.")
+                pyautogui.hotkey('F5')  # Open a new tab in the browser
+                time.sleep(1)  # Wait for the new tab to open
+                pyautogui.hotkey('ctrl', 'l')  # Focus on the address bar (Ctrl + L)
+                pyautogui.typewrite("https://odyssey.sonic.game/task/check-in")  # Type the website URL
+                pyautogui.press('enter')  # Press Enter to open the website
+                time.sleep(2)
+                pyautogui.moveTo(960, 540, duration=1)
+                time.sleep(1)
+                pyautogui.scroll(-500)
+                if locate_and_click("checkinalready.png", confidence=0.8):
+                    print("Check-in already done, skipping approval.")
+                else:
+                    print("Check-in not done yet, clicking check-in button...")
+                    locate_and_click("checkin.png", confidence=0.8)
+                    time.sleep(3)
+                    locate_and_click("approvecheckin.png", confidence=0.8)
+            else:
+                print("Check-in feature is disabled. Skipping check-in process.")
 
+        # Transaction repeat
+locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
+time.sleep(3)
+repeat_transaction(wallet_password, num_transactions)
+close_chrome()
 
 window.close()
+
