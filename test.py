@@ -196,6 +196,7 @@ while True:
         with open(DATA_FILE, 'w') as file:
             json.dump(profiles_data, file, indent=4)
 
+
         # Open Chrome and enter the wallet password only once
         if not chrome_opened:
             open_chrome_with_profile(google_profile)
@@ -221,5 +222,6 @@ while True:
         # transaction repeat
         locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
         repeat_transaction(wallet_password, num_transactions)
+
 
 window.close()
