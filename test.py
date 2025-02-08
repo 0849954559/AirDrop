@@ -276,20 +276,16 @@ while True:
                 pyautogui.moveTo(960, 540, duration=1)
                 time.sleep(1)
                 pyautogui.scroll(-500)
-                if locate_and_click("checkinalready.png", confidence=0.8):
-                    print("Check-in already done, skipping approval.")
-                else:
-                    print("Check-in not done yet, clicking check-in button...")
-                    locate_and_click("checkin.png", confidence=0.8)
-                    time.sleep(3)
-                    locate_and_click("approvecheckin.png", confidence=0.8)
+                locate_and_click("checkin.png", confidence=0.8)
+                time.sleep(3)
+                locate_and_click("approvecheckin.png", confidence=0.8)
             else:
                 print("Check-in feature is disabled. Skipping check-in process.")
 
         # Transaction repeat
-locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
-time.sleep(3)
-repeat_transaction(wallet_password, num_transactions)
-close_chrome()
+        locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
+        time.sleep(3)
+        repeat_transaction(wallet_password, num_transactions)
+        close_chrome()
 
 window.close()
