@@ -138,13 +138,18 @@ except FileNotFoundError:
 def repeat_transaction(wallet_password, num_transactions):
     """Only repeat the transaction steps without reopening Chrome or re-entering wallet password"""
     for _ in range(num_transactions):
-        # Execute the actions of the transaction
+        # Try to click the "send" button, if not found click the backup button and return to the repeat loop
+        if not locate_and_click("send.png", confidence=0.8):  # If the "send" button is not found
+            locate_and_click("return.png", confidence=0.8)
+            locate_and_click("return.png", confidence=0.8)
+            locate_and_click("x.png", confidence=0.8)
+            locate_and_click("port.png", confidence=0.8)
+
         locate_and_click("send.png", confidence=0.8)  # Click on send
         locate_and_click("sol.png", confidence=0.8)  # Click on the cryptocurrency type (sol)
         locate_and_click("address.png", confidence=0.8)  # Click on the address field
         enter_address()  # Enter the address from the file
         locate_and_click("next.png", confidence=0.8)  # Click next
-
         enter_random_amount()  # Enter a random amount to send
         locate_and_click("review.png", confidence=0.8)  # Click on review
         locate_and_click("approve.png", confidence=0.7)  # Approve the transaction
@@ -199,7 +204,22 @@ while True:
             enter_password(wallet_password)  # Enter the wallet password once
             chrome_opened = True  # Mark that Chrome has been opened and password entered
 
-        # Only repeat the transaction steps, no need to open Chrome again
+            # check-in
+            pyautogui.hotkey('F5')  # Open a new tab in the browser
+            time.sleep(1)  # Wait for the new tab to open
+            pyautogui.hotkey('ctrl', 'l')  # Focus on the address bar (Ctrl + L)
+            pyautogui.typewrite("https://odyssey.sonic.game/task/check-in")  # Type the website URL # Wait for the new tab to open
+            pyautogui.press('enter')  # Press Enter to open the website
+            time.sleep(2)
+            pyautogui.moveTo(960, 540, duration=1)
+            time.sleep(1)  #
+            pyautogui.scroll(-500)
+            locate_and_click("checkin.png", confidence=0.8)
+            time.sleep(3)
+            locate_and_click("approvecheckin.png", confidence=0.8)
+            time.sleep(1)
+        # transaction repeat
+        locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
         repeat_transaction(wallet_password, num_transactions)
 
 window.close()
