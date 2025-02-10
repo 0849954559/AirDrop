@@ -29,7 +29,7 @@ def create_layout():
          sg.InputText(key='backpack pass', password_char='*')],
         [sg.Text('TX quantity', size=(15, 1)), sg.InputText(key='Num Transactions', size=(5, 1))],
         [sg.Checkbox('Check in', default=True, key='EnableCheckIn')],  # ✅ Checkbox for check-in
-        [sg.Checkbox('Enable Open Box', default=True, key='EnableOpenBox')],  # ✅ Checkbox for open box
+        [sg.Checkbox('Enable Open Box', default=False, key='EnableOpenBox')],  # ✅ Checkbox for open box
         [sg.Button('Open Profile'), sg.Exit()]
     ]
 
@@ -159,7 +159,7 @@ def run_checkin():
         time.sleep(3.5)
         pyautogui.scroll(-500)
         locate_and_click("checkin.png", confidence=0.8)
-        time.sleep(2.5)
+        time.sleep(4.5)
         locate_and_click("approvecheckin.png", confidence=0.8)
         time.sleep(1)
         locate_and_click("backpack_icon.png", confidence=0.8)
@@ -172,7 +172,7 @@ def claim_box():
     pyautogui.press('enter')  # Press Enter to open the website
     time.sleep(2)
     pyautogui.moveTo(960, 540, duration=1)
-    time.sleep(1.5)
+    time.sleep(2.5)
     pyautogui.scroll(-500)
     locate_and_click("claim2.png", confidence=0.9)
     locate_and_click("claim4.png", confidence=0.9)
