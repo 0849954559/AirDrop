@@ -18,22 +18,71 @@ CONFIDENCE_LEVEL = 0.7  # Mức độ nhận diện ảnh mặc định
 BUTTON_IMAGE = 'approvebox.png'  # Ảnh của nút cần bấm
 DISAPPEAR_TIME = 60  # Thời gian tối đa trước khi dừng tìm kiếm
 
-# =========================== HÀM CHÍNH ===========================
+# =========================== Create layout ===========================
 
-def create_layout():
-    """Tạo giao diện chính"""
+def create_initial_layout():
+    """Create the first layout to ask for the number of profiles."""
     return [
-        [sg.Text('Tool Airdrop', font=('Arial', 14, 'bold'))],
-        [sg.Text('Google Profile', size=(15, 1)), sg.InputText(key='Google Profile')],
-        [sg.Text('backpack pass', size=(15, 1)),
-         sg.InputText(key='backpack pass', password_char='*')],
-        [sg.Text('TX quantity', size=(15, 1)), sg.InputText(key='Num Transactions', size=(5, 1))],
-        [sg.Checkbox('Check in', default=True, key='EnableCheckIn')],  # ✅ Checkbox for check-in
-        [sg.Checkbox('Enable Open Box', default=False, key='EnableOpenBox')],  # ✅ Checkbox for open box
-        [sg.Button('Open Profile'), sg.Exit()]
+        [sg.Text('How many profiles do you want to run?', font=('Arial', 14, 'bold'))],
+        [sg.InputText(key='Num Profiles', size=(5, 1))],
+        [sg.Button('Next'), sg.Exit()]
     ]
 
+def save_profiles(profiles_to_save):
+    """Save profiles to the JSON file when Remember checkbox is enabled."""
+    with open(DATA_FILE, 'w') as file:
+        json.dump(profiles_to_save, file, indent=4)
+        print(f"Profiles saved to {DATA_FILE}")
 
+def create_dynamic_layout(num_profiles, saved_profiles=[]):
+    """Create a dynamic layout for entering profile data."""
+    profile_layout = []
+    for i in range(1, num_profiles + 1):
+        saved_profile = saved_profiles[i - 1] if len(saved_profiles) >= i else {}
+
+        profile_layout.append([sg.Text(f'Profile {i}', font=('Arial', 12, 'bold'))])
+        profile_layout.append(
+            [sg.Text('Google Profile', size=(15, 1)),
+             sg.InputText(saved_profile.get('Google Profile', ''), key=f'Google Profile {i}')]
+        )
+        profile_layout.append(
+            [sg.Text('Password', size=(15, 1)),
+             sg.InputText(saved_profile.get('backpack pass', ''), key=f'backpack pass {i}', password_char='*')]
+        )
+        profile_layout.append(
+            [sg.Text('TX quantity', size=(15, 1)),
+             sg.InputText(saved_profile.get('Num Transactions', ''), key=f'Num Transactions {i}', size=(5, 1),
+                          disabled=not saved_profile.get('EnableTransactions', False))]
+        )
+        profile_layout.append(
+            [
+                sg.Checkbox('Enable Transactions', default=saved_profile.get('EnableTransactions', False),
+                            key=f'EnableTransactions {i}', enable_events=True),
+                sg.Checkbox('Check in', default=saved_profile.get('EnableCheckIn', False),
+                            key=f'EnableCheckIn {i}'),
+                sg.Checkbox('Enable Open Box', default=saved_profile.get('EnableOpenBox', False),
+                            key=f'EnableOpenBox {i}')
+            ]
+        )
+        # Add "Remember My Password and Profile" checkbox
+        profile_layout.append(
+            [sg.Checkbox("Remember My Password and Profile", default=bool(saved_profile),
+                         key=f"RememberProfile {i}")]
+        )
+        profile_layout.append([sg.HorizontalSeparator()])
+
+    return [[sg.Column(profile_layout, scrollable=True, vertical_scroll_only=True, size=(600, 400))],
+            [sg.Button('Run Profiles'), sg.Exit()]]
+
+def load_saved_profiles():
+    """Load profiles from the saved JSON file."""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as file:
+                return json.load(file)
+        except json.JSONDecodeError:
+            print(f"Error loading profiles from {DATA_FILE}. Starting fresh...")
+    return []
 
 def find_chrome_path():
     """Tìm đường dẫn Chrome tự động."""
@@ -58,28 +107,28 @@ def find_chrome_path():
 
     return None
 
-
 def open_chrome_with_profile(profile_name):
     """Mở Chrome với profile chỉ định."""
     chrome_path = find_chrome_path()
     if not chrome_path:
         print("Chrome không tìm thấy! Kiểm tra lại cài đặt.")
-        return
-    subprocess.Popen([chrome_path, f'--profile-directory={profile_name}', '--new-window', '--start-maximized',
-                      'https://www.google.com'])
+        return None
+    process = subprocess.Popen([chrome_path,
+                                f'--profile-directory={profile_name}',
+                                '--new-window',
+                                '--start-maximized',
+                                'https://www.google.com'])
+    return process  # Return the process object
 
-
-def close_chrome():
-    """Đóng tất cả các tiến trình Chrome sau khi giao dịch hoàn thành."""
+def close_chrome(chrome_process):
+    """Đóng tiến trình Chrome cụ thể đã mở."""
     print("Closing Google Chrome...")
-    for process in psutil.process_iter(attrs=['pid', 'name']):
-        if "chrome" in process.info['name'].lower():
-            try:
-                process_pid = process.info['pid']
-                psutil.Process(process_pid).terminate()  # Terminate Chrome
-                print(f"Closed Chrome process (PID: {process_pid})")
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+    try:
+        chrome_process.terminate()  # Terminate the specific Chrome process
+        chrome_process.wait(timeout=5)  # Wait for it to terminate gracefully
+        print(f"Closed Chrome process with PID: {chrome_process.pid}")
+    except Exception as e:
+        print(f"Failed to close Chrome process: {e}")
 
 def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_time=1):
     """Tìm và click vào ảnh với xử lý lỗi."""
@@ -101,7 +150,7 @@ def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_ti
                 return True
         except pyautogui.ImageNotFoundException:
             print(f"Attempt {attempt+1}/{retries}: '{image_name}' not found, retrying...")
-        time.sleep(0.5)
+        time.sleep(1.5)
 
     pyautogui.screenshot("debug_screen.png")
     print(f"Không tìm thấy '{image_name}', đã lưu ảnh màn hình debug_screen.png")
@@ -110,10 +159,9 @@ def locate_and_click(image_name, retries=5, confidence=CONFIDENCE_LEVEL, wait_ti
 
 def enter_password(password):
     """Nhập mật khẩu"""
-    time.sleep(4)
+    time.sleep(5)
     pyautogui.typewrite(password, interval=0.05)
     pyautogui.press('enter')
-
 
 def get_random_address():
     """Lấy một địa chỉ ngẫu nhiên từ file"""
@@ -126,7 +174,6 @@ def get_random_address():
 
     return random.choice(addresses) if addresses else None
 
-
 def enter_address():
     """Nhập địa chỉ ví từ file"""
     address = get_random_address()
@@ -137,14 +184,12 @@ def enter_address():
     else:
         print("Không có địa chỉ để nhập!")
 
-
 def enter_random_amount():
     """Nhập số lượng token ngẫu nhiên (0.00000x)"""
     time.sleep(1)
     random_number = f"0.00000{random.randint(1, 9)}"
     pyautogui.typewrite(random_number, interval=0.01)
     print(f"Entered amount: {random_number}")
-
 
 def run_checkin():
     if enable_checkin:
@@ -303,8 +348,6 @@ def locate_and_click_with_timer(image_name, confidence=CONFIDENCE_LEVEL):
 
     return has_clicked
 
-
-
 def process_transaction():
     print("Starting transaction...")
     success = locate_and_click_with_timer(BUTTON_IMAGE, confidence=0.7)
@@ -313,83 +356,150 @@ def process_transaction():
     else:
         print("Transaction failed: No transaction boxes to process or button not found.")
 
-# =========================== CHẠY TOOL ===========================
 
+# =========================== MAIN PROGRAM ===========================
 
+saved_profiles = load_saved_profiles()
 
-try:
-    with open(DATA_FILE, 'r') as file:
-        profiles_data = json.load(file)
-except FileNotFoundError:
-    profiles_data = []
-
-
-
-# Create the window
-window = sg.Window('Dynamic Entry Form', create_layout(), finalize=True)
-
-# Flag to track if the Chrome profile and password have been opened
-chrome_opened = False
+window = sg.Window('Profile Setup Tool', create_initial_layout(), finalize=True)
+profiles_data = []  # Global profile data
+num_profiles = len(saved_profiles)  # Pre-fill number of profiles if saved profiles exist
 
 while True:
     event, values = window.read()
 
-    if event in (sg.WIN_CLOSED, 'Exit'):
+    if event in (sg.WIN_CLOSED, 'Exit'):  # Exit condition
         break
 
-    if event == 'Open Profile':
-        google_profile = values['Google Profile']
-        wallet_password = values['backpack pass']
-        enable_checkin = values['EnableCheckIn']  # ✅ Read the "Check-In" checkbox value
-        enable_open_box = values['EnableOpenBox']  # ✅ Read the "Enable Open Box" checkbox value
+    # Handle enabling/disabling the TX quantity field dynamically
+    elif event.startswith('EnableTransactions'):
+        checkbox_id = event.split(' ')[-1]
+        num_tx_key = f'Num Transactions {checkbox_id}'
+        if num_tx_key in window.key_dict:
+            window[num_tx_key].update(disabled=not values[event], value='' if not values[event] else '')
 
-        # Validate that the necessary fields are filled
-        if not google_profile or not wallet_password:
-            sg.popup("Please enter both the Google Profile and Wallet Password.")
-            continue
-
-        # Get the TX quantity from the user input
+    # Handle "Next" button press for setting up dynamic layout
+    elif event == 'Next':
         try:
-            num_transactions = int(values['Num Transactions'])  # Get the TX quantity from the input
-            if num_transactions <= 0:
-                sg.popup("Please enter a positive number for transactions.")
+            num_profiles = int(values['Num Profiles'])
+            if num_profiles <= 0:
+                sg.popup("Please enter a positive number for profiles.")
                 continue
         except ValueError:
-            sg.popup("Invalid TX quantity. Please enter a valid number.")
+            sg.popup("Invalid number of profiles. Please enter a valid integer.")
             continue
 
-        # Save the data to JSON
-        entry = {"Chrome Profile": google_profile, "backpack pass": wallet_password}
-        profiles_data.append(entry)
-        with open(DATA_FILE, 'w') as file:
-            json.dump(profiles_data, file, indent=4)
+        # Switch to the profile entry form
+        window.close()
+        window = sg.Window('Dynamic Profile Entry Form',
+                           create_dynamic_layout(num_profiles, saved_profiles), finalize=True)
 
-        # Open Chrome and enter the wallet password only once
-        if not chrome_opened:
-            open_chrome_with_profile(google_profile)
-            time.sleep(4)  # Wait for Chrome to open
-            locate_and_click("backpack_icon.png", confidence=0.8)  # Click on send
-            enter_password(wallet_password)  # Enter the wallet password once
-            chrome_opened = True  # Mark that Chrome has been opened and password entered
+    # Handle "Run Profiles" press
+    elif event == 'Run Profiles':
+        profiles_data = []  # Reset before processing
+        profiles_to_save = []  # Only store profiles with "Remember Me" checked
 
-        # ✅ Run Check-In only if enabled
-        if enable_checkin:
-            run_checkin()
+        for i in range(1, num_profiles + 1):
+            google_profile = values.get(f'Google Profile {i}', '').strip()
+            wallet_password = values.get(f'backpack pass {i}', '').strip()
+            enable_transactions = values.get(f'EnableTransactions {i}', False)
+            enable_checkin = values.get(f'EnableCheckIn {i}', False)
+            enable_open_box = values.get(f'EnableOpenBox {i}', False)
+            remember_profile = values.get(f'RememberProfile {i}', False)
 
-        # Transaction repeat
-        time.sleep(1.5)
-        repeat_transaction( num_transactions)
+            # Validate transaction count (if enabled)
+            num_transactions = 0
+            if enable_transactions:
+                try:
+                    num_transactions = int(values.get(f'Num Transactions {i}', 0))
+                except ValueError:
+                    sg.popup_error(f"Invalid TX quantity for Profile {i}. Please provide a valid number.")
+                    continue
 
-        claim_box()
+            # Validate essential fields
+            if not google_profile or not wallet_password:
+                sg.popup_error(f"Profile {i} is missing Google Profile or Password.")
+                continue
 
-        # ❇️ Open Box only if enabled
-        if enable_open_box:
-            print("Open Box is enabled. Opening boxes...")
-            open_box()
-        else:
-            print("Open Box is disabled. Skipping the Open Box process.")
+            # Compile profile data
+            profile = {
+                "Google Profile": google_profile,
+                "backpack pass": wallet_password,
+                "EnableTransactions": enable_transactions,
+                "EnableCheckIn": enable_checkin,
+                "EnableOpenBox": enable_open_box,
+                "Num Transactions": num_transactions
+            }
+            profiles_data.append(profile)
 
+            # Save profile if "Remember Me" is checked
+            if remember_profile:
+                profiles_to_save.append(profile)
 
+        # Save remembered profiles to file
+        save_profiles(profiles_to_save)
+
+        if not profiles_data:
+            sg.popup("No valid profiles provided. Please check your inputs.")
+            continue
+
+        # Perform processing logic for each profile
+        for idx, profile in enumerate(profiles_data):
+            try:
+                print(f"\n--- Starting Profile {idx + 1}: {profile['Google Profile']} ---")
+
+                # Retrieve profile-specific info
+                google_profile = profile["Google Profile"]
+                wallet_password = profile["backpack pass"]
+                enable_transactions = profile["EnableTransactions"]
+                enable_checkin = profile["EnableCheckIn"]
+                enable_open_box = profile["EnableOpenBox"]
+                num_transactions = profile["Num Transactions"]
+
+                # Open Chrome with the current profile
+                chrome_process = open_chrome_with_profile(google_profile)
+                time.sleep(5)  # Allow Chrome to start properly
+
+                # Simulate entering the wallet password
+                locate_and_click('backpack_icon.png', confidence=0.8)
+                enter_password(wallet_password)
+
+                # Perform check-in if required
+                if enable_checkin:
+                    print("Check-in enabled. Performing check-in...")
+                    run_checkin()
+                    print(f"Check-in completed for Profile {idx + 1}.")
+
+                # Perform transactions if required
+                if enable_transactions and num_transactions > 0:
+                    print(f"Starting {num_transactions} transactions for Profile {idx + 1}...")
+                    repeat_transaction(num_transactions)
+                    claim_box()
+                    print(f"{num_transactions} transactions completed for Profile {idx + 1}.")
+
+                # Open boxes if required
+                if enable_open_box:
+                    print("Opening boxes...")
+                    open_box()
+                    print("Box opening completed.")
+
+            except Exception as e:
+                print(f"Error processing Profile {idx + 1}: {e}")
+                continue  # Skip to the next profile in case of an error
+
+            finally:
+                # Ensure Chrome is closed for the current profile
+                if chrome_process:
+                    close_chrome(chrome_process)
+                print(f"\n--- Finished Profile {idx + 1} ---")
+
+        print("\nAll profiles processed successfully!")
+
+# Close the window once the loop exits
 window.close()
+
+
+
+
 
 
